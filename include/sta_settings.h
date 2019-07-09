@@ -1,0 +1,11 @@
+//
+// Created by Stepan on 08.07.2019.
+//
+
+#ifndef PLATFORMIONODEMCU_STA_SETTINGS_H
+#define PLATFORMIONODEMCU_STA_SETTINGS_H
+
+#define STASSID "Nokia 5"
+#define STAPSK  "fom12345"
+
+#endif //PLATFORMIONODEMCU_STA_SETTINGS_H

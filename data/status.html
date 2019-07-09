@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<link rel="stylesheet" type="text/css" href="css/siimple.min.css">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+	</head>
+	<body>
+		<ul class="navbar">
+			<li><a href="/">Home</a></li>
+			<li><a class="active" href="status">Status</a></li>
+			<li><a href="settings">Settings</a></li>
+			<li><a href="about">About</a></li>
+		</ul>
+
+		<div class="grid main">
+			<h1>WI-FI Status</h1>
+			<table class="table table-striped">
+				<tr>
+					<td><b>SSID:</b></td>
+					<td id="ssid"></td>
+				</tr>
+				<tr>
+					<td><b>Password:</b></td>
+					<td id="wifi_pass"></td>
+				</tr>
+			</table>
+
+			<h1 class="pad">Hardware</h1>
+			<div id="status_box" class="alert alert-info">Loading..</div>
+			<p>Simple voltage measurer, which read value from ESP ADC (PIN A0). Values of Y axis is between 0 and 1023.</p>
+			<div id="chartContainer" style="height: 300px; width: 100%;"></div>
+			<p/>
+
+
+			<p>LED Control</p>
+			<div class="onoffswitch">
+				<input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="led-switch" onclick="gpio()">
+				<label class="onoffswitch-label" for="led-switch">
+					<span class="onoffswitch-inner"></span>
+					<span class="onoffswitch-switch"></span>
+				</label>
+			</div>
+
+			<h1 class="pad">Server Status</h1>
+			<table class="table table-striped">
+				<tr>
+					<td><b>Uptime:</b></td>
+					<td id="uptime"></td>
+				</tr>
+				<tr>
+					<td><b>Free heap:</b></td>
+					<td id="heap"></td>
+				</tr>
+				<tr>
+					<td><b>LED state:</b></td>
+					<td id="led"></td>
+				</tr>
+			</table>
+
+			<h1 class="pad">How it works</h1>
+			<p>This demo uses 2 WebScokets. Status parameters are streamed by the server in JSON format every 500 milliseconds.
+				A <code>websocket_task</code> is created each time a specific URI is requested.</p>
+			<p>ADC values are being continuously polled by the client (i.e. your browser).
+				Each time a WebSocket frame is received on the server side, <code>websocket_cb</code> function is being called.</p>
+		</div>
+
+		<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+		<script type="text/javascript" src="js/smoothie_min.js"></script>
+		<script>
+
+			var dps = []; // dataPoints
+			var chart = new CanvasJS.Chart("chartContainer", {
+				animationEnabled: true,
+				animationDuration: 800,
+				axisX: {
+					interlacedColor: "#F0F8FF"
+				},
+				axisY: {
+					title: "ADC voltage"
+				},
+				data: [{
+					type: "line",
+					dataPoints: dps
+				}]
+			});
+
+			var xVal = 0;
+			var dataLength = 30; // number of dataPoints visible at any point
+
+			var updateChart = function (yVal) {
+
+				dps.push({
+					x: xVal,
+					y: yVal
+				});
+				xVal++;
+
+				if (dps.length > dataLength) {
+					dps.shift();
+				}
+
+				chart.render();
+			};
+
+			var ws;
+			var retries;
+			window.onload = function() {
+				wsOpen();
+				setInterval(function() { wsWrite('A'); }, 1000);
+			};
+			function setMsg(cls, text) {
+				sbox = document.getElementById('status_box');
+				sbox.className = "alert alert-" + cls;
+				sbox.innerHTML = text;
+				console.log(text);
+			}
+
+			function onMessage(evt) {
+				retries = 0;
+				var dv = new DataView(evt.data);
+				var val = dv.getUint16(0);
+				if (val == 0xBEEF || val == 0xDEAD)
+					console.log("LED switched");
+				else {
+					updateChart(val)
+				}
+			}
+			function wsOpen() {
+				if (ws === undefined || ws.readyState != 0) {
+					if (retries)
+						setMsg("error", "WebSocket timeout, retrying..");
+					else
+						setMsg("info", "Opening WebSocket..");
+					ws = new WebSocket("ws://" + location.host);
+					ws.binaryType = 'arraybuffer';
+					ws.onopen = function(evt) { retries = 0; setMsg("done", "WebSocket is open."); };
+					ws.onerror = function(evt) { setMsg("error", "WebSocket error!"); };
+					ws.onmessage = function(evt) { onMessage(evt); };
+					wsOpenStream();
+					retries = 0;
+				}
+			}
+			function wsOpenStream() {
+				var uri = "/stream";
+				var ws = new WebSocket("ws://" + location.host + uri);
+				ws.onmessage = function(evt) {
+					console.log(evt.data);
+					var stats = JSON.parse(evt.data);
+					console.log(stats);
+					document.getElementById('uptime').innerHTML = stats.uptime + ' seconds';
+					document.getElementById('heap').innerHTML = stats.heap + ' bytes';
+					document.getElementById('led').innerHTML = (stats.led == 1) ? 'On' : 'Off';
+					document.getElementById('led').innerHTML = (stats.led == 1) ? 'On' : 'Off';
+					document.getElementById('led').innerHTML = (stats.led == 1) ? 'On' : 'Off';
+					document.getElementById('ssid').innerHTML = stats.ssid
+					document.getElementById('wifi_pass').innerHTML = stats.wifi_pass
+				};
+			}
+			function wsWrite(data) {
+				if (ws.readyState == 3 || retries++ > 5)
+					wsOpen();
+				else if (ws.readyState == 1)
+					ws.send(data);
+			}
+			function gpio() {
+				if (document.getElementById('led-switch').checked)
+					wsWrite('E');
+				else
+					wsWrite('D');
+			}
+		</script>
+	</body>
+</html>

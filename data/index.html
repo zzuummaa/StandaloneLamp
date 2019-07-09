@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no">
+		<link rel="stylesheet" type="text/css" href="css/siimple.min.css">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+		<link rel="shortcut icon" href="img/favicon.png">
+		<title>HTTP Server</title>
+	</head>
+	<body>
+		<ul class="navbar">
+			<li><a class="active" href="/">Home</a></li>
+			<li><a href="settings">Settings</a></li>
+			<li><a href="about">About</a></li>
+		</ul>
+
+		<div class="grid main">
+			<h1>ESP8266 HTTP Server</h1>
+			<div id="server_status" class="alert alert-error"></div>
+
+<!--			<h1 class="pad">How it works</h1>-->
+<!--			<p> Each time the server detects a tag of the form <code>&lt;!&#45;&#45;#name&#45;&#45;&gt;</code> in a .shtml, .ssi or .shtm file-->
+<!--				where <code>name</code> appears as one of the tags supplied to <code>http_set_ssi_handler</code> in the <code>pcConfigSSITags</code> array,-->
+<!--				an insert string is appended after the tag string in file and sent back to the client.</p>-->
+<!--			<p>A CGI handler function is called each time the server is asked for a file-->
+<!--				whose name was previously registered as a CGI function using a call to <code>http_set_cgi_handler</code>.-->
+<!--				This function allows you to access the parameters provided along with the URI.</p>-->
+
+			<h1>WI-FI Status</h1>
+			<table class="table table-striped">
+				<tr>
+					<td><b>SSID:</b></td>
+					<td id="ssid"></td>
+				</tr>
+				<tr>
+					<td><b>Password:</b></td>
+					<td id="wifi_pass"></td>
+				</tr>
+			</table>
+		</div>
+		<script src="js/webapi.js"></script>
+		<script>
+			window.onload = function () {
+				updateStatus();
+				requestWifiSettings(function (json) {
+					document.getElementById("ssid").innerText = json.SSID;
+					document.getElementById("wifi_pass").innerText = json.PSK;
+				});
+			};
+		</script>
+	</body>
+</html>
