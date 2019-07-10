@@ -29,7 +29,7 @@ add_custom_target(
 
 add_custom_target(
     PLATFORMIO_MONITOR ALL
-    COMMAND ${PLATFORMIO_CMD} -f -c clion device monitor -b 115200
+    COMMAND ${PLATFORMIO_CMD} -f -c clion device monitor
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

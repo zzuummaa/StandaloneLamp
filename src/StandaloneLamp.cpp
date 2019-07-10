@@ -8,13 +8,26 @@
 #include <Ticker.h>
 
 #define BUILTIN_LED 2
-#define FLASH_BUTTON 0
+#define FLASH_BUTTON D3
 
 Ticker ticker;
+
 boolean isFlashButtonWasPressed = false;
+boolean isFlashButtonClicked = false;
+uint32_t flashButtonLawTime;
 
 void ICACHE_RAM_ATTR pushFlashButtonHandler() {
-    isFlashButtonWasPressed = true;
+    int state = digitalRead(FLASH_BUTTON);
+    if (state == LOW) {
+        isFlashButtonWasPressed = true;
+        flashButtonLawTime = system_get_time();
+    } else if (isFlashButtonWasPressed) {
+        isFlashButtonWasPressed = false;
+        uint32_t highTime = system_get_time();
+        int32_t dif = highTime > flashButtonLawTime ? highTime - flashButtonLawTime
+                                                    : UINT32_MAX - flashButtonLawTime + highTime;
+        if (dif > 200 * 1000) isFlashButtonClicked = true;
+    }
 }
 
 void tick() {
@@ -33,7 +46,7 @@ void setup() {
     Serial.begin(115200);
 
     pinMode(FLASH_BUTTON, INPUT_PULLUP);
-    attachInterrupt ( digitalPinToInterrupt (FLASH_BUTTON), pushFlashButtonHandler, FALLING);
+    attachInterrupt ( digitalPinToInterrupt (FLASH_BUTTON), pushFlashButtonHandler, CHANGE);
 
     //set led pin as output
     pinMode(BUILTIN_LED, OUTPUT);
@@ -62,7 +75,7 @@ void setup() {
     wifi_station_get_config(&conf);
     while (!wifiManager.autoConnect("AutoConnectAP")) {
 //        wifi_station_set_config_current(&conf);
-        if (isFlashButtonWasPressed) {
+        if (isFlashButtonClicked) {
             WiFi.disconnect();
             delay(100);
         }
@@ -84,7 +97,7 @@ void setup() {
 
 void loop() {
     // put your main code here, to run repeatedly:
-    if (isFlashButtonWasPressed) {
+    if (isFlashButtonClicked) {
         WiFi.disconnect();
         delay(100);
         ESP.restart();
